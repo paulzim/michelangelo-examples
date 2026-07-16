@@ -15,9 +15,15 @@ applied together via this project's own
   `michelangelo`'s
   `python/examples/pipelines/california_housing_lightning/`. See its own
   README for how to run it locally or against a Michelangelo sandbox.
+- [`xgboost_train`](pipelines/xgboost_train/) —
+  distributed XGBoost regression via Ray Train's `XGBoostTrainer`, migrated
+  from a fork's `python/examples/pipelines/california_housing_xgb/`. No
+  local-only quick start — unlike `pytorch_train`, training goes through
+  Ray Train from the start, so it always requires a Michelangelo sandbox.
+  See its own README for the sandbox command sequence.
 
-Future sibling pipelines against this same use case (e.g. an
-`xgboost_train` pipeline) would live alongside it under `pipelines/`.
+Both pipelines share [`feature_prep`/`preprocess`](pipelines/libs/tasks/)
+against the same prepared dataset.
 
 ## Layout
 

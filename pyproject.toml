@@ -11,9 +11,9 @@ authors = [
 
 [project.optional-dependencies]
 # One extras group per project (use case), not per pipeline: all pipelines
-# under california_housing (today: pytorch_train; future:
-# xgboost_train, etc.) share this dependency set and the same built image,
-# so pinning per-pipeline would just duplicate near-identical extras.
+# under california_housing (pytorch_train, xgboost_train) share this
+# dependency set and the same built image, so pinning per-pipeline would
+# just duplicate near-identical extras.
 # michelangelo's published wheel gates pyspark/pytorch_lightning/ray/torch
 # behind its own "example" extra, which also drags in a pile of unrelated
 # deps (xgboost, transformers, mlflow, kaggle, chronon-ai, ...). There is no
@@ -46,6 +46,11 @@ california-housing = [
     # or made pluggable for an actively-maintained S3-compatible backend
     # (e.g. SeaweedFS/RustFS).
     "minio>=7.2,<8",
+    # xgboost_train pipeline: distributed training via Ray Train's
+    # XGBoostTrainer. Version-matched to michelangelo's own pyproject.toml
+    # ("example" extra) rather than left to resolve freely.
+    "xgboost==2.1.4",
+    "xgboost_ray==0.1.19",
 ]
 
 [build-system]

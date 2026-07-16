@@ -6,8 +6,9 @@ released [`michelangelo`](https://pypi.org/project/michelangelo/) PyPI
 package — no core `michelangelo` monorepo checkout required.
 
 Part of the `california_housing` project (use case); this is its
-`pytorch_train` pipeline. A sibling `xgboost_train` pipeline may
-be added later under the same project.
+`pytorch_train` pipeline. See
+[`xgboost_train`](../xgboost_train/) for a sibling pipeline against the
+same use case.
 
 Two ways to run this pipeline:
 
@@ -50,6 +51,10 @@ feature_prep  →  preprocess  →  train  →  push_step
   with PySpark 3.5 + Hadoop 3.3 (`getSubject is not supported`). On macOS:
   `brew install openjdk@17` then
   `export JAVA_HOME=$(brew --prefix openjdk@17)/libexec/openjdk.jdk/Contents/Home`
+
+If you hit sandbox issues getting to this point (helm timeouts, zombie Ray
+clusters, Cadence domain registration, MA Studio 415 errors, ...), see
+[`docs/sandbox-troubleshooting.md`](../../../../../docs/sandbox-troubleshooting.md).
 
 ### End-to-end: sandbox to running pipeline
 

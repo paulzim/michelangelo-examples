@@ -37,7 +37,8 @@ jobs:
         run: |
           uv run python -c "
           from michelangelo_examples.california_housing.pipelines.pytorch_train.model import TorchRegressionModel
-          from michelangelo_examples.california_housing.pipelines.pytorch_train import pipeline, train, push, _backend
+          from michelangelo_examples.california_housing.pipelines.pytorch_train import pipeline as pt_pipeline, train as pt_train, push as pt_push, _backend
+          from michelangelo_examples.california_housing.pipelines.xgboost_train import pipeline as xgb_pipeline, train as xgb_train, push as xgb_push
           from michelangelo_examples.california_housing.pipelines.libs.tasks import feature_prep, preprocess
           print('imports OK')
           "

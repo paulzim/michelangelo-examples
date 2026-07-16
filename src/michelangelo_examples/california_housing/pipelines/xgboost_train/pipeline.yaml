@@ -1,0 +1,11 @@
+apiVersion: michelangelo.api/v2
+kind: Pipeline
+metadata:
+  namespace: "california-housing"
+  name: "xgboost-train"
+  annotations:
+    michelangelo/uniflow-image: ghcr.io/michelangelo-ai/michelangelo-examples:california-housing
+spec:
+  type: "PIPELINE_TYPE_TRAIN"
+  manifest:
+    filePath: michelangelo_examples.california_housing.pipelines.xgboost_train.pipeline
