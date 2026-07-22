@@ -19,6 +19,43 @@ pulls can exceed the timeout window while the pods are still coming up
 healthy in the background. If the previously-failing pods are now `Running`,
 `ma sandbox sync` will pick up cleanly — no need for `ma sandbox delete`.
 
+## Sandbox doesn't come back after a machine restart
+
+`ma sandbox start` restarts the k3d nodes but can surface a few restart-only
+failure modes before pods are usable again:
+
+- **`ma sandbox start` fails on a missing `.pem` path.** k3d bakes a temp-file
+  path for the local CA cert into the cluster's volume mount at creation
+  time; the temp file doesn't survive a restart. If the path now exists as a
+  directory instead (some OSes recreate it that way), remove it first, then
+  recreate the file from the system keychain:
+
+  ```bash
+  rmdir <path-from-error>   # only if it's now a directory
+  security find-certificate -a -p /Library/Keychains/System.keychain > <path-from-error>
+  ma sandbox start
+  ```
+
+- **Pods stuck in `CreateContainerConfigError: secret not found` even though
+  the secret exists.** k3d's kubelet caches a stale "not found" result from
+  before the secret was created; deleting/recreating the pod doesn't clear
+  it. Restart the k3s server process instead:
+
+  ```bash
+  docker restart k3d-<cluster-name>-server-0
+  # wait ~30s, then:
+  kubectl get pods -n default
+  ```
+
+- **The k3d server container itself is missing** (k3d reports the cluster as
+  running, but `kubectl` can't connect at all). This isn't recoverable by
+  restarting anything — delete and recreate the cluster
+  (`ma sandbox delete && ma sandbox create`).
+
+After any of the above, if only `kube-system` pods are present (no
+Michelangelo pods), run `ma sandbox sync` to redeploy the Helm chart and
+bring them back — a restart does not restart pod processes on its own.
+
 ## MA Studio shows HTTP 415 / "Unable to fetch data"
 
 MA Studio's browser client posts plain `application/json`; Envoy's
@@ -109,6 +146,33 @@ kuberay sets briefly while the head pod is still being scheduled — gets
 treated as a fatal terminal error instead of a retry-able one. Check
 `kubectl logs` on the controllermgr pod for `HeadPodNotFound` around the
 time of failure to confirm.
+
+## RayJob permanently fails with `BackoffLimitExceeded`
+
+A fresh Ray head pod's first boot can take several minutes before its
+liveness/readiness endpoints respond — this is normal, and the pod recovers
+on its own. The problem is that KubeRay's RayJob submitter defaults to only
+`submitterBackoffLimit: 2` (3 total attempts), which exhausts in well under a
+minute — long before the head pod has stabilized — so the RayJob then
+permanently fails with `BackoffLimitExceeded` even though the cluster would
+have come up fine given more time. Submitter pod logs typically show
+`ConnectionRefusedError` or `ServerDisconnectedError` against the dashboard
+port.
+
+This is specific to `xgboost_train` (and any future pipeline going through
+Ray Train's distributed trainers) — `pytorch_train`'s Ray usage doesn't
+submit through a `RayJob` the same way.
+
+**Fix**: [`michelangelo-ai/michelangelo` PR #1573](https://github.com/michelangelo-ai/michelangelo/pull/1573)
+raises the submitter backoff limit and tolerates the same transient
+`HeadPodNotFound`/`ContainersNotReady` conditions as the fix above. Not yet
+merged as of this writing — if you hit `BackoffLimitExceeded` before it
+lands, the workaround is the same custom-image approach as the
+`HeadPodNotFound` fix: build a controllermgr image from a commit with PR
+#1573's changes and deploy it with `kubectl set image
+deployment/michelangelo-controllermgr app=<image> -n default` (remember this
+takes Helm field ownership — see the SSA conflict entry above if `ma sandbox
+sync` fails afterward).
 
 ## `kuberay-historyserver` stuck in `ImagePullBackOff`
 
