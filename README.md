@@ -38,11 +38,10 @@ project (use case) with two pipelines,
 [`pytorch_train`](src/michelangelo_examples/california_housing/pipelines/pytorch_train/)
 (PyTorch Lightning, migrated from core `michelangelo`'s
 `python/examples/pipelines/california_housing_lightning/`) and
-[`xgboost_train`](src/michelangelo_examples/california_housing/pipelines/xgboost_train/)
-(distributed XGBoost via Ray Train, migrated from a fork's
-`python/examples/pipelines/california_housing_xgb/`). Structuring it as a
-project with a `pipelines/` subfolder is what let the second pipeline slot
-in alongside the first without a top-level rename.
+[`xgb_train`](src/michelangelo_examples/california_housing/pipelines/xgb_train/)
+(distributed XGBoost via Ray Train). Structuring it as a project with a
+`pipelines/` subfolder is what let the second pipeline slot in alongside
+the first without a top-level rename.
 
 v1 candidates (not yet ported): `movielens`, `bert-cola`. See the
 [project spec](https://github.com/michelangelo-ai/michelangelo/tree/main/python/examples)
@@ -66,11 +65,11 @@ python -m michelangelo_examples.california_housing.pipelines.pytorch_train
 
 Extras are scoped per **project**, not per pipeline: installing
 `california-housing` pulls in the dependencies for every pipeline under
-that project (`pytorch_train` and `xgboost_train`), since they already
+that project (`pytorch_train` and `xgb_train`), since they already
 share one built image and mostly overlapping dependency sets.
 
 The `pip install` + `python -m` commands above run the lightweight local
-tier only, and only `pytorch_train` has one — `xgboost_train` trains via
+tier only, and only `pytorch_train` has one — `xgb_train` trains via
 Ray Train's `XGBoostTrainer` from the start and always requires a sandbox.
 To run a pipeline's full Cadence-dispatched version against a
 Michelangelo sandbox (`ma project apply` → `ma pipeline apply` →

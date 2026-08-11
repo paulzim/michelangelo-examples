@@ -10,15 +10,20 @@ registry.
 from __future__ import annotations
 
 import michelangelo.uniflow.core as uniflow
-from michelangelo_examples.california_housing.pipelines.libs.tasks.feature_prep import feature_prep
+from michelangelo.uniflow.plugins.ray import RayTask
+from michelangelo.uniflow.plugins.spark import SparkTask
+
+from michelangelo_examples.california_housing.pipelines.libs.tasks.feature_prep import (
+    feature_prep,
+)
 from michelangelo_examples.california_housing.pipelines.libs.tasks.preprocess import (
     PreprocessResult,
     preprocess,
 )
-from michelangelo_examples.california_housing.pipelines.pytorch_train.push import push_step
+from michelangelo_examples.california_housing.pipelines.pytorch_train.push import (
+    push_step,
+)
 from michelangelo_examples.california_housing.pipelines.pytorch_train.train import train
-from michelangelo.uniflow.plugins.ray import RayTask
-from michelangelo.uniflow.plugins.spark import SparkTask
 
 __all__ = [
     "PreprocessResult",

@@ -21,7 +21,9 @@ from sklearn.datasets import fetch_california_housing
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, Dataset
 
-from michelangelo_examples.california_housing.pipelines.pytorch_train.model import TorchRegressionModel
+from michelangelo_examples.california_housing.pipelines.pytorch_train.model import (
+    TorchRegressionModel,
+)
 
 log = logging.getLogger(__name__)
 

@@ -1,16 +1,9 @@
-"""Pusher step for the California Housing Lightning workflow.
+"""Pusher step for the California Housing XGBoost workflow.
 
-Pushes the trained model and preprocessed train/validation datasets to
-storage and registry in a single Spark task. ``train_tabular()`` hands off
-its trained model as an intra-pipeline ``ModelVariable`` (there is no OSS
-"assembler" task yet to package it into a registry-ready ``ModelArtifact``),
-so ``push_step`` does that conversion itself (download the state-dict file,
-wrap it as a local ``ModelArtifact``) before handing off to the shared
-``ModelPusherPlugin``.
-
-Unlike xgb's ``TrainResult``, ``train_tabular()`` does not return training
-metrics (no eval-metrics dict), so this pusher omits the ``eval_report``
-plugin that the xgb example pushes.
+Pushes all pipeline artifacts in a single Spark task: trained XGBoost model,
+evaluation report, and preprocessed train/validation datasets. All four artifacts
+share the same storage backend -- MinIO / S3-compatible for remote runs,
+local filesystem for development and CI.
 """
 
 from __future__ import annotations
@@ -23,6 +16,7 @@ from michelangelo.lib.model_manager.constants import ModelKind
 from michelangelo.uniflow.plugins.spark import SparkTask
 from michelangelo.workflow.schema.pusher import (
     DatasetPluginConfig,
+    EvalReportPluginConfig,
     ModelPluginConfig,
     PusherConfig,
     PusherPluginConfig,
@@ -34,15 +28,16 @@ from michelangelo.workflow.variables.types import (
     PusherResult,
 )
 
-from michelangelo_examples.california_housing.pipelines.pytorch_train._backend import (
+from michelangelo_examples.california_housing.pipelines.xgb_train._backend import (
     resolve_storage_backend,
 )
 
 if TYPE_CHECKING:
-    from michelangelo.workflow.variables import ModelVariable
-
     from michelangelo_examples.california_housing.pipelines.libs.tasks.preprocess import (
         PreprocessResult,
+    )
+    from michelangelo_examples.california_housing.pipelines.xgb_train.train import (
+        TrainResult,
     )
 
 log = logging.getLogger(__name__)
@@ -61,24 +56,24 @@ __all__ = ["push_step"]
 )
 def push_step(
     pr: PreprocessResult,
-    model_variable: ModelVariable,
+    train_result: TrainResult,
 ) -> list[PusherResult]:
-    """Push the trained model and preprocessed datasets in a single Spark step.
+    """Push all pipeline artifacts to storage and registry in a single Spark step.
 
-    Pushes three artifacts using a single storage backend selected at runtime:
+    Pushes four artifacts using a single storage backend selected at runtime:
 
-    - **model** -- the Lightning checkpoint, converted from the
-      intra-pipeline ``ModelVariable`` returned by ``train_tabular()`` into a
-      local ``ModelArtifact``, via ``ModelPusherPlugin``.
-    - **train_data** / **validation_data** -- preprocessed datasets via
+    - **model** -- trained XGBoost checkpoint via ``ModelPusherPlugin``.
+    - **eval_report** -- training metrics via ``EvalReportPusherPlugin``.
+    - **train_data** -- preprocessed training dataset via ``DatasetPusherPlugin``
+      + ``S3Sink`` (remote) or ``LocalFileSink`` (local/CI).
+    - **validation_data** -- preprocessed validation dataset via
       ``DatasetPusherPlugin`` + ``S3Sink`` (remote) or ``LocalFileSink`` (local/CI).
 
     Args:
         pr: Result of the ``preprocess`` task, holding preprocessed training
             and validation ``DatasetVariable`` handles.
-        model_variable: Result of the ``train`` task -- a ``ModelVariable``
-            wrapping the trained Lightning model, persisted under
-            ``UF_STORAGE_URL``.
+        train_result: Result of the ``train`` task, holding the XGBoost
+            checkpoint path and training metrics.
 
     Returns:
         List of ``PusherResult``, one per artifact pushed.
@@ -88,28 +83,45 @@ def push_step(
 
     import fsspec
 
-    storage_backend, is_remote = resolve_storage_backend("california_lightning_push_")
+    storage_backend, is_remote = resolve_storage_backend("california_xgb_push_")
 
-    _run_id = os.path.basename(model_variable.path.rstrip("/"))
+    # ── Locate XGBoost checkpoint ────────────────────────────────────────────
+    # train_result.path is a directory (Ray's XGBoostTrainer run directory),
+    # local or s3://. fsspec's url_to_fs() picks the right filesystem
+    # (LocalFileSystem or s3fs, using the same AWS_* env vars s3fs already
+    # reads elsewhere in this pipeline) so both cases share one glob/get
+    # call instead of branching between a raw Minio client and glob.glob().
+    #
+    # Ray's Result.path is deliberately scheme-less even for remote/cloud
+    # storage (e.g. "default/ray_results/run-..." for storage_path
+    # "s3://default/ray_results") -- Ray expects callers to pair it with
+    # result.filesystem rather than treat it as a URI. Re-qualify it with
+    # the scheme our own resolve_storage_backend() already determined,
+    # otherwise fsspec.core.url_to_fs() defaults to LocalFileSystem and
+    # looks for the checkpoint on the Spark driver's local disk, where it
+    # was never written.
+    raw_path = train_result.path
+    if is_remote and "://" not in raw_path:
+        raw_path = f"s3://{raw_path}"
+    fs, fs_path = fsspec.core.url_to_fs(raw_path)
+    matches = fs.glob(f"{fs_path}/**/model.ubj")
+    if not matches:
+        matches = [p for p in fs.glob(f"{fs_path}/**/*") if fs.isfile(p)]
+    if not matches:
+        raise FileNotFoundError(f"No model checkpoint found under {raw_path}")
 
-    # train_tabular() no longer packages/uploads the model itself -- it hands
-    # off an intra-pipeline ModelVariable persisted under UF_STORAGE_URL, and
-    # there is no OSS "assembler" task yet to turn that into a registry-ready
-    # ModelArtifact. Pull the state-dict file it already wrote (via
-    # save_lightning_model()) down to local disk with the same fsspec
-    # mechanism ModelVariable itself uses, then wrap it as a ModelArtifact --
-    # the local-file contract ModelPusherPlugin expects.
-    local_model_dir = tempfile.mkdtemp(prefix="california_lightning_push_model_")
-    local_model_path = os.path.join(local_model_dir, "model.pt")
-    fs, remote_model_path = fsspec.core.url_to_fs(model_variable.path)
-    fs.get(remote_model_path, local_model_path)
-    model_artifact = ModelArtifact(
-        path=local_model_path, metadata=model_variable.metadata
-    )
+    tmp_ckpt_dir = tempfile.mkdtemp(prefix="checkpoint_")
+    checkpoint_path = os.path.join(tmp_ckpt_dir, "model.ubj")
+    fs.get(matches[0], checkpoint_path)
+    log.info("Found model checkpoint: %s", checkpoint_path)
 
+    _run_id = os.path.basename(train_result.path)
+
+    # ── Load datasets as pandas DataFrames ───────────────────────────────────
     pr.train_data.load_pandas_dataframe()
     pr.validation_data.load_pandas_dataframe()
 
+    # ── Dataset sink config ──────────────────────────────────────────────────
     if is_remote:
         from michelangelo.workflow.schema.sinks.s3 import S3SinkConfig
         from michelangelo.workflow.tasks.functions.sinks import S3Sink
@@ -135,6 +147,7 @@ def push_step(
                 ]
             )
 
+    # ── Registry client ───────────────────────────────────────────────────────
     registry_endpoint = os.environ.get("REGISTRY_ENDPOINT")
     if registry_endpoint:
         import grpc as _grpc
@@ -149,7 +162,7 @@ def push_step(
             else _grpc.secure_channel(registry_endpoint, _credentials)
         )
         _api_client = APIClient(
-            caller="california-housing-lightning-push-step",
+            caller="california-housing-xgb-push-step",
             channel=_channel,
         )
         registry_client = APIRegistryClient(
@@ -170,37 +183,55 @@ def push_step(
             "Model registration will not be persisted."
         )
 
+    # ── Pusher config ─────────────────────────────────────────────────────────
+    from michelangelo.gen.api.v2.evaluation_report_pb2 import (
+        EvaluationReport,
+        EvaluationReportSpec,
+    )
+
+    metrics = {k: round(v, 4) for k, v in (train_result.metrics or {}).items()}
     config = PusherConfig(
         items=[
             PusherPluginConfig(
                 name="model",
                 model_plugin=ModelPluginConfig(
-                    description="PyTorch Lightning regression on California Housing dataset",
+                    description="XGBoost regression on California Housing dataset",
                     kind=ModelKind.REGRESSION,
-                    labels={"framework": "pytorch_lightning"},
+                    labels={"framework": "xgboost"},
+                    metadata=metrics,
+                ),
+            ),
+            PusherPluginConfig(
+                name="eval_report",
+                eval_report_plugin=EvalReportPluginConfig(
+                    extra_fields=metrics,
                 ),
             ),
             PusherPluginConfig(
                 name="train_data",
                 dataset_plugin=_dataset_config(
-                    f"datasets/california-housing-lightning/{_run_id}/train"
+                    f"datasets/california-housing/{_run_id}/train"
                 ),
             ),
             PusherPluginConfig(
                 name="validation_data",
                 dataset_plugin=_dataset_config(
-                    f"datasets/california-housing-lightning/{_run_id}/validation"
+                    f"datasets/california-housing/{_run_id}/validation"
                 ),
             ),
         ]
     )
 
-    assembled = AssembledModel(raw_model=model_artifact)
+    assembled = AssembledModel(raw_model=ModelArtifact(path=checkpoint_path))
+    eval_report = EvaluationReport(
+        spec=EvaluationReportSpec(title="California Housing XGBoost Evaluation")
+    )
 
     results = push(
         config=config,
         artifacts={
             "model": assembled,
+            "eval_report": eval_report,
             "train_data": pr.train_data,
             "validation_data": pr.validation_data,
         },

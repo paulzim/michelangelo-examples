@@ -87,7 +87,7 @@ RUN mkdir -p ${SPARK_HOME}/conf && \
 RUN JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java)))) && \
     echo "JAVA_HOME=${JAVA_HOME}" >> /etc/environment && \
     echo "export JAVA_HOME=${JAVA_HOME}" >> /etc/profile.d/java.sh
-ARG TARGETARCH=amd64
+ARG TARGETARCH
 ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-${TARGETARCH}
 ENV PATH="${JAVA_HOME}/bin:${PATH}"
 

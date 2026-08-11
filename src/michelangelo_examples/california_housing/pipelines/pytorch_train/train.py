@@ -24,10 +24,11 @@ from michelangelo.workflow.schema.tabular_trainer import (
 from michelangelo.workflow.tasks.tabular_trainer.task import train_tabular
 
 if TYPE_CHECKING:
+    from michelangelo.workflow.variables import ModelVariable
+
     from michelangelo_examples.california_housing.pipelines.libs.tasks.preprocess import (
         PreprocessResult,
     )
-    from michelangelo.workflow.variables import ModelVariable
 
 log = logging.getLogger(__name__)
 

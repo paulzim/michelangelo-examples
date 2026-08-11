@@ -10,20 +10,15 @@ applied together via this project's own
 
 ## Pipelines
 
-- [`pytorch_train`](pipelines/pytorch_train/) —
-  PyTorch Lightning regression via `tabular_trainer`, migrated from core
-  `michelangelo`'s
-  `python/examples/pipelines/california_housing_lightning/`. See its own
+- [`pytorch_train`](pipelines/pytorch_train/) --
+  PyTorch Lightning regression via `tabular_trainer`. See its own
   README for how to run it locally or against a Michelangelo sandbox.
-- [`xgboost_train`](pipelines/xgboost_train/) —
-  distributed XGBoost regression via Ray Train's `XGBoostTrainer`, migrated
-  from a fork's `python/examples/pipelines/california_housing_xgb/`. No
-  local-only quick start — unlike `pytorch_train`, training goes through
-  Ray Train from the start, so it always requires a Michelangelo sandbox.
-  See its own README for the sandbox command sequence.
+- [`xgb_train`](pipelines/xgb_train/) --
+  XGBoost distributed regression via Ray's `XGBoostTrainer`. Pushes model,
+  eval report, and preprocessed datasets in a single Spark push step.
 
-Both pipelines share [`feature_prep`/`preprocess`](pipelines/libs/tasks/)
-against the same prepared dataset.
+Both pipelines share the same feature preparation and preprocessing steps
+via [`libs/tasks/`](pipelines/libs/tasks/).
 
 ## Layout
 

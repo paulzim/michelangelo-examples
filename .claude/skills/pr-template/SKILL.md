@@ -30,6 +30,24 @@ Read the template from `.github/pull_request_template.md` and use it as the exac
 - Scopes (optional): a project name (e.g. `california-housing`), `ci`, `docker`
 - Keep under 70 characters
 - Examples: `feat(california-housing): add xgboost_train pipeline`, `fix(docker): install s3fs for fsspec S3 access`
+- **This title becomes the commit message on `main`** (this repo squash-merges), which is what `git-cliff` parses to build `CHANGELOG.md` and the GitHub Release notes on every tag push — get the type/scope/description right here, not just in the PR body's "Release notes" field.
+
+## Changelog / git-cliff mapping
+
+Once merged, `type` determines which `CHANGELOG.md` section the commit lands in:
+
+| Type | Changelog section |
+|---|---|
+| `feat` | Features |
+| `fix` | Bug Fixes |
+| `docs` | Documentation |
+| `perf` | Performance |
+| `refactor` | Refactoring |
+| `ci` | CI/CD |
+| `test` | Testing |
+| `chore` / anything else | Miscellaneous |
+
+For a breaking change, the `BREAKING CHANGE:` footer or `!` suffix (e.g. `feat!:`) is required for it to show up in the changelog's **Breaking Changes** section — checking the PR template's breaking-change boxes alone does nothing to the generated changelog, only the commit message does.
 
 ## Filling in the Template
 
@@ -37,7 +55,7 @@ Read the template from `.github/pull_request_template.md` and use it as the exac
 - **Why?** — The motivation: bug, new example/project, cleanup, requirement.
 - **How did you test it?** — Commands run (`uv sync`, local `python -m` run, `docker build`), or a Michelangelo sandbox run.
 - **Potential risks** — Anything that could break for someone installing/running this example. Default to "None" for docs/chore changes.
-- **Breaking Changes** — Check applicable boxes: API (public functions/classes), dependency changes (`michelangelo` version pin, new required extra), Docker/image changes, pipeline/project config changes (`pipeline.yaml`/`project.yaml` schema, required env vars). Check "No breaking changes" if none apply. If any breaking change is checked, use `BREAKING CHANGE:` footer or `!` suffix in the commit.
+- **Breaking Changes** — Check applicable boxes: API (public functions/classes), dependency changes (`michelangelo` version pin, new required extra), Docker/image changes, pipeline/project config changes (`pipeline.yaml`/`project.yaml` schema, required env vars). Check "No breaking changes" if none apply. If any breaking change is checked, use `BREAKING CHANGE:` footer or `!` suffix in the commit — see Changelog / git-cliff mapping above.
 - **Migration guide** — Required if any breaking change box is checked. Describe step-by-step upgrade instructions with before/after examples. Delete section if no breaking changes.
-- **Release notes** — Only notable if it's a new example/project, a changed dependency pin, or a new required env var. Otherwise "N/A".
+- **Release notes** — Auto-generated from the commit message via git-cliff, not manually written. Just confirm the commit message (PR title) reads well standalone and accurately describes the change — it will appear in `CHANGELOG.md` verbatim.
 - **Documentation Changes** — Note which README(s) were updated (root, per-project, or per-pipeline) or "N/A".

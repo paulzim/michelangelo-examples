@@ -9,7 +9,7 @@ models only (see ``workflow/tasks/tabular_trainer/tests/fixtures.py``).
 from __future__ import annotations
 
 import torch
-import torch.nn.functional as F  # noqa: N812
+import torch.nn.functional as F
 from pytorch_lightning import LightningModule
 from torch import nn
 

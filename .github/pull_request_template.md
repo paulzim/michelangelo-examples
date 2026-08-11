@@ -5,6 +5,8 @@
 - [ ] Optimization
 - [ ] Documentation Update
 
+> **Commit message format matters here.** `CHANGELOG.md` and GitHub Release notes are generated automatically from commit messages via [git-cliff](https://git-cliff.org/) — there's no manual changelog step. Use [Conventional Commits](https://www.conventionalcommits.org/) (`type(scope): description`, e.g. `feat(california-housing): add xgb_train pipeline`) so this PR's commit(s) land in the right changelog section. See the `pr-template` skill for the full type/scope reference.
+
 <!-- Describe what has changed in this PR -->
 **What changed?**
 
@@ -38,8 +40,10 @@
 
 _Describe the steps a user must take to upgrade. Include before/after examples for any API, config, or dependency change._
 
-<!-- Is it notable for release? e.g. a new example/project, a changed dependency pin, a new required env var? -->
+<!-- CHANGELOG.md and the GitHub Release body are generated automatically from commit messages via git-cliff -- nothing to fill in here manually. Just confirm your commit message's type/scope/description accurately describes the change, since that text becomes the changelog entry verbatim. -->
 **Release notes**
+
+_Auto-generated from commit messages via git-cliff. Confirm above that your commit message follows Conventional Commits and reads well standalone (it will appear in `CHANGELOG.md` as-is)._
 
 <!-- Does this PR introduce a user-facing change? Is the relevant README (root or per-project/per-pipeline) updated? -->
 **Documentation Changes**

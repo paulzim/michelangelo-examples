@@ -159,7 +159,7 @@ have come up fine given more time. Submitter pod logs typically show
 `ConnectionRefusedError` or `ServerDisconnectedError` against the dashboard
 port.
 
-This is specific to `xgboost_train` (and any future pipeline going through
+This is specific to `xgb_train` (and any future pipeline going through
 Ray Train's distributed trainers) — `pytorch_train`'s Ray usage doesn't
 submit through a `RayJob` the same way.
 

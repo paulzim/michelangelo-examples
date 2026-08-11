@@ -2,7 +2,7 @@
 
 Loads the California Housing dataset, performs a train/test split, and
 converts the result to Ray Datasets for distributed processing. Shared by
-every pipeline under this project (``pytorch_train``, ``xgboost_train``, ...).
+every pipeline under this project (``pytorch_train``, ``xgb_train``, ...).
 """
 
 from __future__ import annotations

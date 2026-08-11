@@ -1,0 +1,74 @@
+name: Bump michelangelo pin
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  check-drift:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Determine current floor and latest michelangelo release
+        id: versions
+        run: |
+          CURRENT=$(grep -oE '"michelangelo>=[0-9][^"]*"' pyproject.toml | head -1 | sed -E 's/"michelangelo>=([^"]*)"/\1/')
+          LATEST=$(curl -sf https://pypi.org/pypi/michelangelo/json | python3 -c '
+          import json, sys
+          from packaging.version import Version, InvalidVersion
+          data = json.load(sys.stdin)
+          versions = []
+          for v in data["releases"]:
+              try:
+                  parsed = Version(v)
+              except InvalidVersion:
+                  continue
+              if not parsed.is_prerelease:
+                  versions.append(parsed)
+          print(sorted(versions)[-1] if versions else "")
+          ')
+          if [ -z "$LATEST" ]; then
+            echo "::error::Could not determine latest michelangelo release from PyPI"
+            exit 1
+          fi
+          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
+          echo "latest=$LATEST" >> "$GITHUB_OUTPUT"
+          echo "Current floor: $CURRENT / Latest on PyPI: $LATEST"
+
+      - name: Compare versions
+        id: compare
+        run: |
+          python3 -c "
+          from packaging.version import Version
+          current = Version('${{ steps.versions.outputs.current }}')
+          latest = Version('${{ steps.versions.outputs.latest }}')
+          print('newer=' + ('true' if latest > current else 'false'))
+          " >> "$GITHUB_OUTPUT"
+
+      - name: Bump floor constraint
+        if: steps.compare.outputs.newer == 'true'
+        run: ./scripts/version-bump.sh --pin "${{ steps.versions.outputs.latest }}"
+
+      - name: Open PR
+        if: steps.compare.outputs.newer == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.CR_PAT }}
+          commit-message: "chore: bump michelangelo floor to ${{ steps.versions.outputs.latest }}"
+          title: "chore: bump michelangelo floor to ${{ steps.versions.outputs.latest }}"
+          body: |
+            Auto-opened by `bump-michelangelo-pin.yml`. `michelangelo` has published
+            `${{ steps.versions.outputs.latest }}` on PyPI; this repo's floor constraint
+            was still `${{ steps.versions.outputs.current }}`.
+
+            CI on this PR (`test.yaml`) validates the example pipelines still run
+            against the new floor before merging.
+          branch: "bump-michelangelo-pin/${{ steps.versions.outputs.latest }}"
+          add-paths: pyproject.toml
