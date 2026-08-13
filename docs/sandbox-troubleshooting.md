@@ -56,6 +56,53 @@ After any of the above, if only `kube-system` pods are present (no
 Michelangelo pods), run `ma sandbox sync` to redeploy the Helm chart and
 bring them back — a restart does not restart pod processes on its own.
 
+## `mysql`/`minio` pods vanish after a node goes `NotReady` (no auto-recovery)
+
+`mysql` and `minio` are deployed as bare `Pod` objects (see
+`python/michelangelo/cli/sandbox/resources/{mysql,minio}.yaml` in the
+monorepo), not Deployments or StatefulSets — so nothing recreates them if
+they're evicted. This can happen even without a full cluster restart: if a
+k3d node goes `NotReady` for long enough (e.g. after a Docker Desktop VM
+restart triggered by a resource-allocation change) and these pods happened
+to be scheduled on it, the node controller evicts them and they're simply
+gone — `kubectl get pods -n default` won't show them in any state,
+`Terminating` or otherwise.
+
+Symptom: everything depending on MySQL fails in a way that traces back to
+`dial tcp <mysql-cluster-ip>:3306: connect: connection refused` (check
+`kubectl logs --previous` on any crash-looping pod — `controllermgr`,
+`apiserver`'s `wait-for-metadata-storage` init container, and Cadence's
+`wait-for-schema` init containers all depend on it). Similarly for MinIO —
+`dial tcp <minio-cluster-ip>:9091: connect: connection refused` — usually
+hits `history-server` first.
+
+Confirm with:
+
+```bash
+kubectl get pod mysql minio -n default   # "NotFound" if evicted
+```
+
+**Fix** — `ma sandbox sync` will NOT recreate these; its own code comment
+says infrastructure (mysql, cadence, minio, grafana, prometheus) is left
+running/untouched. Recreate the pods directly first, then re-sync. MySQL
+has no PVC, so its data is genuinely gone — re-syncing refreshes the
+`michelangelo` schema and, via the Helm reinstall, re-triggers Cadence's
+own schema-setup job to recreate the `cadence`/`cadence_visibility`
+databases. MinIO's `hostPath` volume at `/shared/minio-data` usually means
+its bucket data survives the pod recreation:
+
+```bash
+kubectl apply -f python/michelangelo/cli/sandbox/resources/mysql.yaml
+kubectl apply -f python/michelangelo/cli/sandbox/resources/minio.yaml
+kubectl wait --for=condition=ready pod/mysql pod/minio -n default --timeout=120s
+poetry run ma sandbox sync   # from the monorepo's python/ dir
+```
+
+If a prior `kubectl set image` hotfix is in place (e.g. a custom
+controllermgr build), this re-sync will likely hit the Helm SSA conflict
+described below too — resolve it the same way, then re-apply the hotfix
+once more.
+
 ## MA Studio shows HTTP 415 / "Unable to fetch data"
 
 MA Studio's browser client posts plain `application/json`; Envoy's
@@ -79,7 +126,7 @@ If an earlier step in the same sync timed out, an exception can skip domain
 registration entirely, and pipeline runs fail immediately with something
 like:
 
-```
+```text
 EntityNotExistsError{Message: Domain default does not exist.}
 ```
 
@@ -121,7 +168,7 @@ recreated automatically.
 
 If `ma sandbox sync` fails with something like:
 
-```
+```text
 conflict with "kubectl-set" using apps/v1: .spec.template.spec.containers[name="app"].image
 ```
 
@@ -168,8 +215,8 @@ raises the submitter backoff limit and tolerates the same transient
 `HeadPodNotFound`/`ContainersNotReady` conditions as the fix above. Not yet
 merged as of this writing — if you hit `BackoffLimitExceeded` before it
 lands, the workaround is the same custom-image approach as the
-`HeadPodNotFound` fix: build a controllermgr image from a commit with PR
-#1573's changes and deploy it with `kubectl set image
+`HeadPodNotFound` fix: build a controllermgr image from a commit with
+PR #1573's changes and deploy it with `kubectl set image
 deployment/michelangelo-controllermgr app=<image> -n default` (remember this
 takes Helm field ownership — see the SSA conflict entry above if `ma sandbox
 sync` fails afterward).
