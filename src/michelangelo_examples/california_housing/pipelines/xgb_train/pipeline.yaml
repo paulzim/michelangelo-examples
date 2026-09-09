@@ -9,3 +9,8 @@ spec:
   type: "PIPELINE_TYPE_TRAIN"
   manifest:
     filePath: michelangelo_examples.california_housing.pipelines.xgb_train.pipeline
+    triggerMap:
+      daily-noon-run:
+        cronSchedule:
+          cron: "0 12 * * *"
+        maxConcurrency: 1

@@ -2,9 +2,10 @@
 
 Workflow entry point that orchestrates the full California Housing pipeline
 via ``tabular_trainer``'s Lightning backend: feature preparation, Spark
-preprocessing, distributed Lightning training with Ray Train, and a pusher
-step that exports the model and preprocessed datasets to storage and
-registry.
+preprocessing, distributed Lightning training with Ray Train, an assembler
+step that packages the trained model into deployable/raw Triton packages,
+and a pusher step that exports the packaged model and preprocessed datasets
+to storage and registry.
 """
 
 from __future__ import annotations
@@ -20,6 +21,9 @@ from michelangelo_examples.california_housing.pipelines.libs.tasks.preprocess im
     PreprocessResult,
     preprocess,
 )
+from michelangelo_examples.california_housing.pipelines.pytorch_train.assembler import (
+    assembler,
+)
 from michelangelo_examples.california_housing.pipelines.pytorch_train.push import (
     push_step,
 )
@@ -27,6 +31,7 @@ from michelangelo_examples.california_housing.pipelines.pytorch_train.train impo
 
 __all__ = [
     "PreprocessResult",
+    "assembler",
     "feature_prep",
     "preprocess",
     "push_step",
@@ -82,7 +87,8 @@ def train_workflow(
         pr,
         feature_columns=_dataset_cols[:-1],
     )
-    return push_step(pr, model_artifact)
+    assembled = assembler(model_artifact)
+    return push_step(pr, assembled)
 
 
 if __name__ == "__main__":

@@ -101,10 +101,25 @@ k3d image import michelangelo-examples:local -c michelangelo-sandbox
 # Create the project (if not already created)
 ma project apply -f src/michelangelo_examples/california_housing/config/project.yaml
 
-# Apply and run the pipeline
+# Apply the pipeline
 ma pipeline apply -f src/michelangelo_examples/california_housing/pipelines/xgb_train/pipeline.yaml
+
+# One-time: start the daily-noon-run trigger declared in pipeline.yaml
+# (applying the pipeline above does NOT start it on its own -- this
+# TriggerRun must be explicitly created once)
+ma trigger_run create --namespace=california-housing --pipeline=xgb-train --trigger-name=daily-noon-run
+
+# Run it manually (optional -- the trigger above already runs it daily at 12:00pm)
 ma pipeline run -n california-housing --name xgb-train
 ```
+
+The `ma trigger_run create` command above is a **one-time** step per
+trigger -- it registers the `daily-noon-run` trigger (declared in
+`pipeline.yaml`'s `triggerMap`) with the platform so it starts producing
+runs on its own cron schedule (`0 12 * * *`, i.e. daily at 12:00pm). It is
+distinct from the following `ma pipeline run`, which triggers one ad hoc
+manual run and can be repeated any number of times independently of the
+daily schedule.
 
 ### Environment variables
 

@@ -1,6 +1,6 @@
 [project]
 name = "michelangelo-examples"
-version = "0.3.0"
+version = "0.5.0"
 description = "Pip-installable, ready-to-run example models and pipelines for Michelangelo"
 readme = "README.md"
 license = "Apache-2.0"
@@ -23,11 +23,11 @@ authors = [
 california-housing = [
     # >=0.5.0: floor kept current with michelangelo's latest release via the
     # scheduled bump-michelangelo-pin.yml drift check.
-    "michelangelo>=0.8.0",
-    "pyspark==3.5.5",
+    "michelangelo>=0.10.0",
+    "pyspark==4.2.0",
     "pytorch_lightning>=2.2.0,<3.0.0",
     "ray[default,data]>=2.55.1,<3.0.0",
-    "pyarrow>=19.0.0,<20.0.0",
+    "pyarrow>=19.0.0,<26.0.0",
     "torch>=2.0",
     "scikit-learn>=1.3",
     "pandas>=2.1",

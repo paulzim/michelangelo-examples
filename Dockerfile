@@ -25,7 +25,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     libffi-dev \
     liblzma-dev \
     zlib1g-dev \
-    openjdk-11-jdk
+    openjdk-17-jdk
 
 # Set Python version
 ENV PYTHON_VERSION=3.10.14
@@ -54,7 +54,7 @@ RUN uv --version
 # --------------------------
 # 3. Install Spark (manual)
 # --------------------------
-ENV SPARK_VERSION=3.5.5
+ENV SPARK_VERSION=4.2.0
 ENV HADOOP_VERSION=3
 ENV SPARK_HOME=/opt/spark
 
@@ -70,9 +70,24 @@ ENV PATH="${SPARK_HOME}/bin:${SPARK_HOME}/sbin:${PATH}"
 # Create JAR directory if needed
 RUN mkdir -p ${SPARK_HOME}/jars
 
-# Download hadoop-aws and aws-java-sdk-bundle JARs for S3 support
-RUN curl -L -o ${SPARK_HOME}/jars/hadoop-aws-3.3.4.jar https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.3.4/hadoop-aws-3.3.4.jar && \
-    curl -L -o ${SPARK_HOME}/jars/aws-java-sdk-bundle-1.11.1026.jar https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/1.11.1026/aws-java-sdk-bundle-1.11.1026.jar
+# Download hadoop-aws and the AWS SDK bundle JAR for S3 support.
+# Versions must match the Hadoop client bundled with this SPARK_VERSION
+# (Spark 4.2.0 ships hadoop-client-{api,runtime}-3.5.0) -- mixing an older
+# hadoop-aws against a newer Hadoop core causes classpath-level config
+# incompatibilities (e.g. NumberFormatException parsing duration-string
+# config values like "60s" that older hadoop-aws expects as plain longs).
+# Hadoop 3.4+ migrated hadoop-aws from AWS SDK v1 (com.amazonaws:aws-java-sdk-bundle)
+# to AWS SDK v2 (software.amazon.awssdk:bundle) -- hadoop-aws-3.5.0 references
+# software.amazon.awssdk.* classes (e.g. SdkException) directly, so the old v1
+# bundle jar is not sufficient and causes ClassNotFoundException at runtime.
+# Version taken from hadoop-project 3.5.0's own POM (<aws-java-sdk-v2.version>).
+# hadoop-aws-3.5.0 also references the S3 Analytics Accelerator Library
+# (software.amazon.s3.analyticsaccelerator) for its S3A input stream policy;
+# version taken from hadoop-project 3.5.0's own POM
+# (<amazon-s3-analyticsaccelerator-s3.version>).
+RUN curl -L -o ${SPARK_HOME}/jars/hadoop-aws-3.5.0.jar https://repo1.maven.org/maven2/org/apache/hadoop/hadoop-aws/3.5.0/hadoop-aws-3.5.0.jar && \
+    curl -L -o ${SPARK_HOME}/jars/bundle-2.35.4.jar https://repo1.maven.org/maven2/software/amazon/awssdk/bundle/2.35.4/bundle-2.35.4.jar && \
+    curl -L -o ${SPARK_HOME}/jars/analyticsaccelerator-s3-1.3.1.jar https://repo1.maven.org/maven2/software/amazon/s3/analyticsaccelerator/analyticsaccelerator-s3/1.3.1/analyticsaccelerator-s3-1.3.1.jar
 
 RUN mkdir -p ${SPARK_HOME}/conf && \
     echo "spark.hadoop.fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem" >> ${SPARK_HOME}/conf/spark-defaults.conf && \
@@ -88,7 +103,7 @@ RUN JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java)))) && \
     echo "JAVA_HOME=${JAVA_HOME}" >> /etc/environment && \
     echo "export JAVA_HOME=${JAVA_HOME}" >> /etc/profile.d/java.sh
 ARG TARGETARCH
-ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-${TARGETARCH}
+ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-${TARGETARCH}
 ENV PATH="${JAVA_HOME}/bin:${PATH}"
 
 # Set working directory
