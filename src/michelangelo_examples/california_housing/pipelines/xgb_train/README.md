@@ -11,6 +11,10 @@ PyTorch Lightning variant, see
 same feature preparation and preprocessing steps via
 [`libs/tasks/`](../libs/tasks/).
 
+New to this pipeline? [`EXPLAINED.md`](EXPLAINED.md) is a plain-English
+walkthrough of what it does and why, before diving into the technical
+reference below.
+
 ## Pipeline
 
 ```
