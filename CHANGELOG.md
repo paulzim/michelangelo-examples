@@ -2,6 +2,65 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.0] - 2026-09-22
+
+
+### Bug Fixes
+
+
+- **bert_cola:** Drop removed logging_dir kwarg for transformers 5.x (#62)
+
+
+- **bert_cola:** Rename Trainer tokenizer kwarg to processing_class for transformers 5.x (#64)
+
+
+
+### CI/CD
+
+
+- Add release-drafter for categorized GitHub Release notes (#52)
+
+
+- Bump release-drafter/release-drafter from 6.4.0 to 7.7.0 (#56)
+
+
+
+### Documentation
+
+
+- Update CHANGELOG.md for v0.5.0 (#51)
+
+
+
+### Features
+
+
+- **bert_cola:** Add bert_cola as a project (#41)
+
+
+- **bert_cola:** Add daily noon trigger to train pipeline (#55)
+
+
+
+### Miscellaneous
+
+
+- **deps:** Bump torch from 2.13.0 to 2.14.0 in the uv-minor-and-patch group across 1 directory (#48)
+
+
+- **deps:** Bump transformers from 4.57.6 to 5.17.0 (#58)
+
+
+- **deps:** Bump pytorch-lightning from 2.6.5 to 2.6.6 in the uv-minor-and-patch group (#57)
+
+
+- Bump michelangelo floor to 0.11.0 (#63)
+
+
+- Release 0.6.0 (#65)
+
+
+
 ## [0.5.0] - 2026-09-09
 
 

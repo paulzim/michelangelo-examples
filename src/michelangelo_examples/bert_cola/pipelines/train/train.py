@@ -95,7 +95,6 @@ def train(
         per_device_eval_batch_size=batch_size,
         num_train_epochs=max_epochs,
         learning_rate=lr,
-        logging_dir=f"{output_dir}/logs",
         load_best_model_at_end=True,
     )
 
@@ -105,7 +104,7 @@ def train(
         args=training_args,
         train_dataset=train_data,
         eval_dataset=validation_data,
-        tokenizer=tokenizer,
+        processing_class=tokenizer,
         compute_metrics=_compute_metrics,
     )
 

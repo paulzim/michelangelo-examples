@@ -1,0 +1,11 @@
+apiVersion: michelangelo.api/v2
+kind: Pipeline
+metadata:
+  namespace: "gpt-oss-20b-finetune"
+  name: "gpt-oss-20b-finetune-train"
+  annotations:
+    michelangelo/uniflow-image: ghcr.io/michelangelo-ai/michelangelo-examples:gpt-oss-20b-finetune
+spec:
+  type: "PIPELINE_TYPE_TRAIN"
+  manifest:
+    filePath: michelangelo_examples.gpt_oss_20b_finetune.pipelines.train.pipeline

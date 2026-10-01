@@ -27,8 +27,12 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     zlib1g-dev \
     openjdk-17-jdk
 
-# Set Python version
-ENV PYTHON_VERSION=3.10.14
+# Set Python version. Defaulting to today's value means any build that does
+# not pass --build-arg PYTHON_VERSION explicitly (i.e. bert-cola's and
+# california-housing's existing CI matrix entries, and any local `docker
+# build` with no --build-arg) is byte-for-byte unaffected by this change.
+ARG PYTHON_VERSION=3.10.14
+ENV PYTHON_VERSION=${PYTHON_VERSION}
 
 # Download and install Python from source
 RUN wget https://www.python.org/ftp/python/$PYTHON_VERSION/Python-$PYTHON_VERSION.tgz && \
@@ -40,9 +44,13 @@ RUN wget https://www.python.org/ftp/python/$PYTHON_VERSION/Python-$PYTHON_VERSIO
     cd .. && \
     rm -rf Python-$PYTHON_VERSION*
 
-# Ensure python3.10 is the default
-RUN ln -sf /usr/local/bin/python3.10 /usr/bin/python3 && \
-    ln -sf /usr/local/bin/python3.10 /usr/bin/python
+# Ensure the freshly-built interpreter is the default python3/python.
+# `make altinstall` never overwrites a system python -- it only installs
+# as python<major>.<minor> (e.g. python3.10, python3.11), so the symlink
+# target must track PYTHON_VERSION rather than being hardcoded to 3.10.
+RUN PYTHON_MM=$(echo "$PYTHON_VERSION" | cut -d. -f1,2) && \
+    ln -sf /usr/local/bin/python${PYTHON_MM} /usr/bin/python3 && \
+    ln -sf /usr/local/bin/python${PYTHON_MM} /usr/bin/python
 
 # Install pip and uv
 RUN python --version
@@ -122,7 +130,8 @@ COPY . .
 
 # Install python dependencies via uv, only this project's extra.
 RUN uv venv /app/.venv
-RUN uv pip install --python /app/.venv/bin/python ".[${PROJECT_EXTRA}]"
+RUN --mount=type=cache,target=/root/.cache/uv,sharing=locked \
+    uv pip install --system-certs --python /app/.venv/bin/python ".[${PROJECT_EXTRA}]"
 
 # Activate the venv by default
 ENV PATH="/app/.venv/bin:$PATH"

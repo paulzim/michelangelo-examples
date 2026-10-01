@@ -71,4 +71,6 @@ jobs:
             CI on this PR (`test.yaml`) validates the example pipelines still run
             against the new floor before merging.
           branch: "bump-michelangelo-pin/${{ steps.versions.outputs.latest }}"
-          add-paths: pyproject.toml
+          add-paths: |
+            pyproject.toml
+            uv.lock

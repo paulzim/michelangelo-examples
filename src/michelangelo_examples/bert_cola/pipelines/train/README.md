@@ -52,9 +52,21 @@ ma project apply -f src/michelangelo_examples/bert_cola/config/project.yaml
 # 3. Register this pipeline (namespace: bert-cola, name: bert-cola-train)
 ma pipeline apply -f src/michelangelo_examples/bert_cola/pipelines/train/pipeline.yaml
 
-# 4. Run it
+# 4. One-time: start the daily-noon-run trigger declared in pipeline.yaml
+#    (registering the pipeline in step 3 does NOT start it on its own --
+#    this TriggerRun must be explicitly created once)
+ma trigger_run create --namespace=bert-cola --pipeline=bert-cola-train --trigger-name=daily-noon-run
+
+# 5. Run it manually (optional -- the trigger above already runs it daily at 12:00pm)
 ma pipeline run -n bert-cola --name bert-cola-train
 ```
+
+Step 4 above is a **one-time** command per trigger -- it registers the
+`daily-noon-run` trigger (declared in `pipeline.yaml`'s `triggerMap`) with
+the platform so it starts producing runs on its own cron schedule
+(`0 12 * * *`, i.e. daily at 12:00pm). It is distinct from step 5's
+`ma pipeline run`, which triggers one ad hoc manual run and can be repeated
+any number of times independently of the daily schedule.
 
 `ma pipeline run` dispatches through Cadence using the image already
 declared in `pipeline.yaml`'s `michelangelo/uniflow-image` annotation
@@ -113,8 +125,8 @@ python -m michelangelo_examples.bert_cola.pipelines.train.pipeline \
   --image ghcr.io/michelangelo-ai/michelangelo-examples:bert-cola \
   --storage-url s3://michelangelo/workflows \
   --environ AWS_ENDPOINT_URL=http://minio:9091 \
-  --environ AWS_ACCESS_KEY_ID=minioadmin \
-  --environ AWS_SECRET_ACCESS_KEY=minioadmin \
+  --environ AWS_ACCESS_KEY_ID=michelangeloadmin \
+  --environ AWS_SECRET_ACCESS_KEY=michelangeloadmin \
   --environ REGISTRY_ENDPOINT=michelangelo-apiserver:15566 \
   --yes
 ```

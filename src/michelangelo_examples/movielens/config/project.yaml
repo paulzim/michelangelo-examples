@@ -1,0 +1,16 @@
+apiVersion: michelangelo.api/v2
+kind: Project
+metadata:
+  name: movielens
+  namespace: movielens
+spec:
+  description: "Michelangelo MovieLens-100k NCF Example"
+  owner:
+    owningTeam: "00000000-0000-0000-0000-000000000001"
+    owners:
+      - michelangelo-example
+    ownerGroups:
+      - michelangelo-example
+  tier: 4
+  gitRepo: https://github.com/michelangelo-ai/michelangelo-examples
+  rootDir: src/michelangelo_examples/movielens

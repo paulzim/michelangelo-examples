@@ -33,17 +33,31 @@ full pipeline reference, not a replacement for it.
 ## Examples
 
 Ported so far:
-[`california_housing`](src/michelangelo_examples/california_housing/) — a
-project (use case) with one pipeline so far,
-[`pytorch_train`](src/michelangelo_examples/california_housing/pipelines/pytorch_train/)
-(California Housing price prediction via PyTorch Lightning, migrated from
-core `michelangelo`'s
-`python/examples/pipelines/california_housing_lightning/`). Structuring it
-as a project with a `pipelines/` subfolder leaves room for sibling
-pipelines against the same use case — e.g. a future `xgboost_train`
-pipeline — without another top-level rename.
+- [`california_housing`](src/michelangelo_examples/california_housing/) — a
+  project (use case) with one pipeline so far,
+  [`pytorch_train`](src/michelangelo_examples/california_housing/pipelines/pytorch_train/)
+  (California Housing price prediction via PyTorch Lightning, migrated from
+  core `michelangelo`'s
+  `python/examples/pipelines/california_housing_lightning/`). Structuring it
+  as a project with a `pipelines/` subfolder leaves room for sibling
+  pipelines against the same use case — e.g. a future `xgboost_train`
+  pipeline — without another top-level rename.
+- [`bert_cola`](src/michelangelo_examples/bert_cola/) — fine-tunes BERT for
+  linguistic acceptability classification on the CoLA task, migrated from
+  core `michelangelo`'s `python/examples/bert_cola/`.
+- [`gpt_oss_20b_finetune`](src/michelangelo_examples/gpt_oss_20b_finetune/) —
+  LoRA fine-tuning of GPT-style causal-LM checkpoints (architected for
+  GPT-OSS-20B, tested against GPT-2 as a CPU-feasible proxy), migrated from
+  core `michelangelo`'s `python/examples/gpt_oss_20b_finetune/`. Requires
+  Python 3.11+ (see that project's own README).
+- [`movielens`](src/michelangelo_examples/movielens/) — trains a tiny Neural
+  Collaborative Filtering model on MovieLens-100k via Ray Train + PyTorch
+  Lightning, migrated from core `michelangelo`'s
+  `python/examples/movielens/`. Requires Python 3.11+ (see that project's
+  own README).
 
-v1 candidates (not yet ported): `movielens`, `bert-cola`. See the
+v1 candidates (not yet ported): `nomic_ai`, `amazon_books_qwen`.
+See the
 [project spec](https://github.com/michelangelo-ai/michelangelo/tree/main/python/examples)
 for the full list this repo is drawing from.
 

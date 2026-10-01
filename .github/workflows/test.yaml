@@ -9,10 +9,12 @@ on:
     paths:
       - "src/**"
       - "pyproject.toml"
+      - "uv.lock"
   pull_request:
     paths:
       - "src/**"
       - "pyproject.toml"
+      - "uv.lock"
   workflow_dispatch:
 
 jobs:
@@ -27,6 +29,9 @@ jobs:
         with:
           python-version: "3.10"
 
+      - name: Check lockfile is up to date
+        run: uv lock --check
+
       - name: Sync dependencies (california-housing project extra)
         run: uv sync --extra california-housing
 
@@ -40,6 +45,7 @@ jobs:
           from michelangelo_examples.california_housing.pipelines.pytorch_train import pipeline, train, push, _backend
           from michelangelo_examples.california_housing.pipelines.xgb_train import pipeline as xgb_pipeline
           from michelangelo_examples.california_housing.pipelines.xgb_train import train as xgb_train, push as xgb_push, _backend as xgb_backend
+          from michelangelo_examples.california_housing.pipelines.retrain import pipeline as retrain_pipeline
           from michelangelo_examples.california_housing.pipelines.libs.tasks import feature_prep, preprocess
           print('imports OK')
           "

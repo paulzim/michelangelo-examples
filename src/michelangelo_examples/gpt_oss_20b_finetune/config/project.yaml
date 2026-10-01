@@ -1,0 +1,16 @@
+apiVersion: michelangelo.api/v2
+kind: Project
+metadata:
+  name: gpt-oss-20b-finetune
+  namespace: gpt-oss-20b-finetune
+spec:
+  description: "Michelangelo GPT-OSS-20B Fine-Tuning Example"
+  owner:
+    owningTeam: "00000000-0000-0000-0000-000000000001"
+    owners:
+      - michelangelo-example
+    ownerGroups:
+      - michelangelo-example
+  tier: 4
+  gitRepo: https://github.com/michelangelo-ai/michelangelo-examples
+  rootDir: src/michelangelo_examples/gpt_oss_20b_finetune

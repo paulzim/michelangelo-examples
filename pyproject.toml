@@ -1,6 +1,6 @@
 [project]
 name = "michelangelo-examples"
-version = "0.5.0"
+version = "0.6.0"
 description = "Pip-installable, ready-to-run example models and pipelines for Michelangelo"
 readme = "README.md"
 license = "Apache-2.0"
@@ -23,7 +23,7 @@ authors = [
 california-housing = [
     # >=0.5.0: floor kept current with michelangelo's latest release via the
     # scheduled bump-michelangelo-pin.yml drift check.
-    "michelangelo>=0.10.0",
+    "michelangelo>=0.11.0",
     "pyspark==4.2.0",
     "pytorch_lightning>=2.2.0,<3.0.0",
     "ray[default,data]>=2.55.1,<3.0.0",
@@ -57,12 +57,14 @@ california-housing = [
 bert-cola = [
     # >=0.8.0: floor kept current with michelangelo's latest release via the
     # scheduled bump-michelangelo-pin.yml drift check.
-    "michelangelo>=0.8.0",
+    "michelangelo>=0.11.0",
     "ray[default,data]>=2.55.1,<3.0.0",
     "torch>=2.0",
-    # <5: transformers 5.x removes the `logging_dir` kwarg from
-    # TrainingArguments, which train.py passes.
-    "transformers>=4.30,<5",
+    # <6: transformers 5.x removed the `logging_dir` kwarg from
+    # TrainingArguments (moved to the TENSORBOARD_LOGGING_DIR env var / a
+    # TensorBoardCallback default, only relevant if report_to includes
+    # "tensorboard", which train.py doesn't set)
+    "transformers>=4.30,<6",
     # >=3.0: datasets<3.0 imports pa.PyExtensionType, which pyarrow removed;
     # ray[data]'s own pyarrow floor resolves to a version too new for
     # datasets<3.0 to import at all.
@@ -83,6 +85,69 @@ bert-cola = [
     # its own "minio"/"example" extras rather than declaring it as a core
     # dependency.
     "minio>=7.2,<8",
+]
+
+# gpt_oss_20b_finetune LoRA fine-tunes a causal-LM checkpoint (GPT-2 as a
+# CPU-feasible proxy for GPT-OSS-20B) via Ray Train + PyTorch Lightning +
+# PEFT. Declares transformers/peft/accelerate/datasets directly rather than
+# pulling in michelangelo's own "example" extra, same reasoning as
+# california-housing/bert-cola above.
+# Requires Python 3.11+ (see gpt_oss_20b_finetune/README.md); this repo's
+# own requires-python floor stays >=3.10 for bert-cola/california-housing.
+gpt-oss-20b-finetune = [
+    # >=0.10.0: floor kept current with michelangelo's latest release via the
+    # scheduled bump-michelangelo-pin.yml drift check.
+    "michelangelo>=0.10.0",
+    "ray[default,data]>=2.55.1,<3.0.0",
+    "torch>=2.0",
+    # <5: transformers 5.x removes the `logging_dir` kwarg from
+    # TrainingArguments, which train.py passes (same rationale as bert-cola).
+    "transformers>=4.30,<5",
+    # New, precautionary pin (no existing michelangelo-examples precedent):
+    # peft's LoraConfig API has had breaking changes across major versions.
+    "peft>=0.10,<1",
+    # model.py's GPTLightningModule is a pytorch_lightning.LightningModule
+    # subclass; train.py drives it via Ray Train's Lightning integration.
+    "pytorch_lightning>=2.2.0,<3.0.0",
+    # >=3.0: datasets<3.0 imports pa.PyExtensionType, which pyarrow removed;
+    # ray[data]'s own pyarrow floor resolves to a version too new for
+    # datasets<3.0 to import at all.
+    "datasets>=3.0",
+    # train.py's transformers.Trainer-style training loop (via
+    # LightningTrainer) requires accelerate to drive PyTorch training;
+    # transformers doesn't declare it as a core dependency.
+    "accelerate>=0.26.0",
+    # train.py logs to MLflow via pytorch_lightning.loggers.MLFlowLogger,
+    # ported as-is from core's simple_train.py. michelangelo gates the
+    # 'mlflow' package behind its own "trainer-mlflow"/"example" extras
+    # rather than declaring it as a core dependency.
+    "mlflow>=2.0,<3",
+    # eval.py's fsspec.open() needs an S3 implementation for s3:// paths;
+    # neither michelangelo nor the above deps pull one in.
+    "s3fs>=2023.1.0",
+]
+
+# movielens trains a tiny Neural Collaborative Filtering (NCF) model on
+# MovieLens-100k via Ray Train + PyTorch Lightning -- the smallest viable
+# smoke test for michelangelo's LightningTrainer. Declares
+# ray/torch/pytorch_lightning/pandas directly rather than pulling in
+# michelangelo's own "example" extra, same reasoning as
+# california-housing/bert-cola/gpt-oss-20b-finetune above. No mlflow/comet_ml
+# dependency: the migrated pipeline drops core's optional Comet/MLflow
+# tracking-backend code paths entirely rather than making them opt-in extras
+# (see pipelines/train/README.md's "Deviations from core").
+# Requires Python 3.11+ (see movielens/README.md); this repo's own
+# requires-python floor stays >=3.10 for bert-cola/california-housing.
+movielens = [
+    # >=0.11.0: floor kept current with michelangelo's latest release via the
+    # scheduled bump-michelangelo-pin.yml drift check.
+    "michelangelo>=0.11.0",
+    "ray[default,data]>=2.55.1,<3.0.0",
+    "torch>=2.0",
+    # model.py's NCFLightningModule is a pytorch_lightning.LightningModule
+    # subclass; train.py drives it via Ray Train's Lightning integration.
+    "pytorch_lightning>=2.2.0,<3.0.0",
+    "pandas>=2.1",
 ]
 
 [build-system]

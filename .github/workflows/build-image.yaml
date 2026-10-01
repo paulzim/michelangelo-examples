@@ -38,7 +38,15 @@ jobs:
       packages: write
     strategy:
       matrix:
-        project: [california-housing, bert-cola]
+        include:
+          - project: california-housing
+            python_version: "3.10.14"
+          - project: bert-cola
+            python_version: "3.10.14"
+          - project: gpt-oss-20b-finetune
+            python_version: "3.11.11"
+          - project: movielens
+            python_version: "3.11.11"
 
     steps:
       - name: Check out repository
@@ -72,6 +80,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           build-args: |
             PROJECT_EXTRA=${{ matrix.project }}
+            PYTHON_VERSION=${{ matrix.python_version }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
